@@ -247,6 +247,16 @@ Conflicts: %{_cross_os}settings-defaults(any)
 %description aws-k8s-1.34-nvidia
 %{summary}.
 
+%package aws-k8s-1.34-gvisor
+Summary: Settings defaults for the aws-k8s 1.34 gvisor variants
+Requires: %{_cross_os}variant(aws-k8s-1.34-gvisor)
+Provides: %{_cross_os}settings-defaults(any)
+Provides: %{_cross_os}settings-defaults(aws-k8s-1.34-gvisor)
+Conflicts: %{_cross_os}settings-defaults(any)
+
+%description aws-k8s-1.34-gvisor
+%{summary}.
+
 %package aws-k8s-1.35
 Summary: Settings defaults for the aws-k8s 1.35 variants
 Requires: (%{shrink:
@@ -273,6 +283,16 @@ Provides: %{_cross_os}settings-defaults(aws-k8s-1.35-nvidia-fips)
 Conflicts: %{_cross_os}settings-defaults(any)
 
 %description aws-k8s-1.35-nvidia
+%{summary}.
+
+%package aws-k8s-1.35-gvisor
+Summary: Settings defaults for the aws-k8s 1.35 gvisor variants
+Requires: %{_cross_os}variant(aws-k8s-1.35-gvisor)
+Provides: %{_cross_os}settings-defaults(any)
+Provides: %{_cross_os}settings-defaults(aws-k8s-1.35-gvisor)
+Conflicts: %{_cross_os}settings-defaults(any)
+
+%description aws-k8s-1.35-gvisor
 %{summary}.
 
 %package aws-k8s-1.36
@@ -303,6 +323,16 @@ Conflicts: %{_cross_os}settings-defaults(any)
 %description aws-k8s-1.36-nvidia
 %{summary}.
 
+%package aws-k8s-1.36-gvisor
+Summary: Settings defaults for the aws-k8s 1.36 gvisor variants
+Requires: %{_cross_os}variant(aws-k8s-1.36-gvisor)
+Provides: %{_cross_os}settings-defaults(any)
+Provides: %{_cross_os}settings-defaults(aws-k8s-1.36-gvisor)
+Conflicts: %{_cross_os}settings-defaults(any)
+
+%description aws-k8s-1.36-gvisor
+%{summary}.
+
 %package aws-k8s-1.37
 Summary: Settings defaults for the aws-k8s 1.37 variants
 Requires: (%{shrink:
@@ -329,6 +359,16 @@ Provides: %{_cross_os}settings-defaults(aws-k8s-1.37-nvidia-fips)
 Conflicts: %{_cross_os}settings-defaults(any)
 
 %description aws-k8s-1.37-nvidia
+%{summary}.
+
+%package aws-k8s-1.37-gvisor
+Summary: Settings defaults for the aws-k8s 1.37 gvisor variants
+Requires: %{_cross_os}variant(aws-k8s-1.37-gvisor)
+Provides: %{_cross_os}settings-defaults(any)
+Provides: %{_cross_os}settings-defaults(aws-k8s-1.37-gvisor)
+Conflicts: %{_cross_os}settings-defaults(any)
+
+%description aws-k8s-1.37-gvisor
 %{summary}.
 
 %package metal-dev
@@ -463,12 +503,16 @@ for defaults in \
   aws-k8s-1.33-nvidia \
   aws-k8s-1.34 \
   aws-k8s-1.34-nvidia \
+  aws-k8s-1.34-gvisor \
   aws-k8s-1.35 \
   aws-k8s-1.35-nvidia \
+  aws-k8s-1.35-gvisor \
   aws-k8s-1.36 \
   aws-k8s-1.36-nvidia \
+  aws-k8s-1.36-gvisor \
   aws-k8s-1.37 \
   aws-k8s-1.37-nvidia \
+  aws-k8s-1.37-gvisor \
   metal-dev \
   vmware-dev \
   vmware-k8s-1.32 \
@@ -514,12 +558,16 @@ for defaults in \
   aws-k8s-1.33-nvidia \
   aws-k8s-1.34 \
   aws-k8s-1.34-nvidia \
+  aws-k8s-1.34-gvisor \
   aws-k8s-1.35 \
   aws-k8s-1.35-nvidia \
+  aws-k8s-1.35-gvisor \
   aws-k8s-1.36 \
   aws-k8s-1.36-nvidia \
+  aws-k8s-1.36-gvisor \
   aws-k8s-1.37 \
   aws-k8s-1.37-nvidia \
+  aws-k8s-1.37-gvisor \
   metal-dev \
   vmware-dev \
   vmware-k8s-1.32 \
@@ -610,6 +658,10 @@ done
 %{_cross_defaultsdir}/aws-k8s-1.34-nvidia.toml
 %{_cross_tmpfilesdir}/storewolf-defaults-aws-k8s-1.34-nvidia.conf
 
+%files aws-k8s-1.34-gvisor
+%{_cross_defaultsdir}/aws-k8s-1.34-gvisor.toml
+%{_cross_tmpfilesdir}/storewolf-defaults-aws-k8s-1.34-gvisor.conf
+
 %files aws-k8s-1.35
 %{_cross_defaultsdir}/aws-k8s-1.35.toml
 %{_cross_tmpfilesdir}/storewolf-defaults-aws-k8s-1.35.conf
@@ -617,6 +669,10 @@ done
 %files aws-k8s-1.35-nvidia
 %{_cross_defaultsdir}/aws-k8s-1.35-nvidia.toml
 %{_cross_tmpfilesdir}/storewolf-defaults-aws-k8s-1.35-nvidia.conf
+
+%files aws-k8s-1.35-gvisor
+%{_cross_defaultsdir}/aws-k8s-1.35-gvisor.toml
+%{_cross_tmpfilesdir}/storewolf-defaults-aws-k8s-1.35-gvisor.conf
 
 %files aws-k8s-1.36
 %{_cross_defaultsdir}/aws-k8s-1.36.toml
@@ -626,6 +682,10 @@ done
 %{_cross_defaultsdir}/aws-k8s-1.36-nvidia.toml
 %{_cross_tmpfilesdir}/storewolf-defaults-aws-k8s-1.36-nvidia.conf
 
+%files aws-k8s-1.36-gvisor
+%{_cross_defaultsdir}/aws-k8s-1.36-gvisor.toml
+%{_cross_tmpfilesdir}/storewolf-defaults-aws-k8s-1.36-gvisor.conf
+
 %files aws-k8s-1.37
 %{_cross_defaultsdir}/aws-k8s-1.37.toml
 %{_cross_tmpfilesdir}/storewolf-defaults-aws-k8s-1.37.conf
@@ -633,6 +693,10 @@ done
 %files aws-k8s-1.37-nvidia
 %{_cross_defaultsdir}/aws-k8s-1.37-nvidia.toml
 %{_cross_tmpfilesdir}/storewolf-defaults-aws-k8s-1.37-nvidia.conf
+
+%files aws-k8s-1.37-gvisor
+%{_cross_defaultsdir}/aws-k8s-1.37-gvisor.toml
+%{_cross_tmpfilesdir}/storewolf-defaults-aws-k8s-1.37-gvisor.conf
 
 %files metal-dev
 %{_cross_defaultsdir}/metal-dev.toml

@@ -127,6 +127,13 @@ It supports self-hosted clusters and clusters managed by [EKS](https://aws.amazo
 
 This variant is compatible with Kubernetes 1.34, 1.35, 1.36 and 1.37 clusters.
 
+### aws-k8s-1.34-gvisor: Kubernetes 1.34 gVisor node
+
+The [aws-k8s-1.34-gvisor](aws-k8s-1.34-gvisor/Cargo.toml) variant includes the packages needed to run a Kubernetes node in AWS.
+It also includes [gVisor](https://gvisor.dev), registered with containerd as the `runsc` runtime, for pods that select a RuntimeClass with that handler.
+gVisor runs each sandbox in a user namespace, so this variant allows creating them (`settings.kernel.sysctl."user.max_user_namespaces"`).
+It supports self-hosted clusters and clusters managed by [EKS](https://aws.amazon.com/eks/).
+
 ### aws-k8s-1.35: Kubernetes 1.35 node
 
 The [aws-k8s-1.35](aws-k8s-1.35/Cargo.toml) variant includes the packages needed to run a Kubernetes node in AWS.
@@ -149,6 +156,13 @@ It also includes the required packages to configure containers to leverage NVIDI
 It supports self-hosted clusters and clusters managed by [EKS](https://aws.amazon.com/eks/).
 
 This variant is compatible with Kubernetes 1.35, 1.36, 1.37 and 1.38 clusters.
+
+### aws-k8s-1.35-gvisor: Kubernetes 1.35 gVisor node
+
+The [aws-k8s-1.35-gvisor](aws-k8s-1.35-gvisor/Cargo.toml) variant includes the packages needed to run a Kubernetes node in AWS.
+It also includes [gVisor](https://gvisor.dev), registered with containerd as the `runsc` runtime, for pods that select a RuntimeClass with that handler.
+gVisor runs each sandbox in a user namespace, so this variant allows creating them (`settings.kernel.sysctl."user.max_user_namespaces"`).
+It supports self-hosted clusters and clusters managed by [EKS](https://aws.amazon.com/eks/).
 
 ### aws-ecs-2: Amazon ECS container instance
 
