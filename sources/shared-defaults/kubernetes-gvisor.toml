@@ -1,0 +1,12 @@
+# gVisor runtime for containerd, rendered once at boot (no settings inputs).
+[configuration-files.containerd-gvisor-toml]
+path = "/etc/containerd/config.d/010-gvisor.toml"
+template-path = "/usr/share/templates/containerd-gvisor-toml"
+
+[configuration-files.runsc-toml]
+path = "/etc/containerd/runsc.toml"
+template-path = "/usr/share/templates/runsc-toml"
+
+# gVisor runs each sandbox in a user namespace.
+[settings.kernel.sysctl]
+"user.max_user_namespaces" = "1024"
