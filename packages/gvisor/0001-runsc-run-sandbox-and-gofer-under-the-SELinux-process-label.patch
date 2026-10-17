@@ -1,0 +1,219 @@
+From: Brandon Gachenot <brandon@gachenot.eu>
+Subject: [PATCH] runsc: run sandbox and gofer under the SELinux process label
+
+CRI on SELinux-enabled hosts sets process.selinuxLabel on every
+container, which runsc rejected. Like runc, keep setup (chroot, mounts)
+in the runtime domain and switch to the container label at the re-exec
+that follows it, so the long-running sandbox and gofer are confined by
+the host policy like any other container.
+---
+--- a/runsc/specutils/specutils.go
++++ b/runsc/specutils/specutils.go
+@@ -160,9 +160,8 @@
+ 	if spec.Windows != nil {
+ 		return fmt.Errorf("Spec.Windows is not supported: %+v", spec)
+ 	}
+-	if len(spec.Process.SelinuxLabel) != 0 {
+-		return fmt.Errorf("SELinux is not supported: %s", spec.Process.SelinuxLabel)
+-	}
++	// An SELinux process label is applied when the sandbox and gofer
++	// re-execute themselves after setup (see sandboxsetup.SetExecLabel).
+ 
+ 	// Docker uses AppArmor by default, so just log that it's being ignored.
+ 	if spec.Process.ApparmorProfile != "" {
+--- a/runsc/specutils/namespace.go
++++ b/runsc/specutils/namespace.go
+@@ -138,6 +138,20 @@
+ 	}, nil
+ }
+ 
++// SELinuxLabel returns the SELinux process label requested by spec, if any.
++func SELinuxLabel(spec *specs.Spec) string {
++	if spec == nil || spec.Process == nil {
++		return ""
++	}
++	return spec.Process.SelinuxLabel
++}
++
++// SELinuxEnabled reports whether the host has SELinux enabled.
++func SELinuxEnabled() bool {
++	_, err := os.Stat("/sys/fs/selinux/enforce")
++	return err == nil
++}
++
+ // StartInNS joins or creates the given namespaces and calls cmd.Start before
+ // restoring the namespaces to the original values.
+ func StartInNS(cmd *exec.Cmd, nss []specs.LinuxNamespace) error {
+--- a/runsc/cmd/sandboxsetup/process.go
++++ b/runsc/cmd/sandboxsetup/process.go
+@@ -39,6 +39,9 @@
+ 	runtime.LockOSThread()
+ 	defer runtime.UnlockOSThread()
+ 
++	if err := applyExecLabel(); err != nil {
++		return err
++	}
+ 	if err := ApplyCaps(caps); err != nil {
+ 		return fmt.Errorf("ApplyCaps() failed: %v", err)
+ 	}
+@@ -49,6 +52,42 @@
+ 	return fmt.Errorf("error executing %s: %v", binPath, err)
+ }
+ 
++// execLabel is the SELinux process label that the process re-executed by
++// SetCapsAndCallSelf or CallSelfAsNobody runs with, and execLabelFile is the
++// attr/exec file of the thread that re-executes. Setup that precedes the
++// re-exec stays in the runtime's domain, like runc's init process does.
++var (
++	execLabel     string
++	execLabelFile *os.File
++)
++
++// SetExecLabel makes the next re-exec run with the given SELinux label. The
++// label applies to a single thread and procfs may be read-only once the chroot
++// is set up, so this locks the calling goroutine to its thread for the rest of
++// the process and opens the thread's attr/exec file now. The re-exec must
++// happen on the same goroutine.
++func SetExecLabel(label string) error {
++	runtime.LockOSThread()
++	f, err := os.OpenFile("/proc/thread-self/attr/exec", os.O_WRONLY, 0)
++	if err != nil {
++		return fmt.Errorf("opening SELinux exec attribute: %w", err)
++	}
++	execLabel, execLabelFile = label, f
++	return nil
++}
++
++// applyExecLabel sets the label passed to SetExecLabel, if any, for the next
++// execve of the calling thread.
++func applyExecLabel() error {
++	if execLabelFile == nil {
++		return nil
++	}
++	if _, err := execLabelFile.Write([]byte(execLabel)); err != nil {
++		return fmt.Errorf("setting SELinux exec label %q: %w", execLabel, err)
++	}
++	return nil
++}
++
+ // CallSelfAsNobody sets UID and GID to nobody and then execve's itself
+ // again.
+ func CallSelfAsNobody(args []string) error {
+@@ -56,6 +95,10 @@
+ 	runtime.LockOSThread()
+ 	defer runtime.UnlockOSThread()
+ 
++	if err := applyExecLabel(); err != nil {
++		return err
++	}
++
+ 	const nobody = 65534
+ 
+ 	if _, _, err := unix.RawSyscall(unix.SYS_SETGID, uintptr(nobody), 0, 0); err != 0 {
+--- a/runsc/cmd/sentry/sentrycmd/boot.go
++++ b/runsc/cmd/sentry/sentrycmd/boot.go
+@@ -135,6 +135,10 @@
+ 	// setUpChroot is set to true if the sandbox is started in an empty root.
+ 	setUpRoot bool
+ 
++	// selinuxLabel is the SELinux process label the sandbox re-executes into
++	// once setup is done.
++	selinuxLabel string
++
+ 	// cpuNum number of CPUs to create inside the sandbox.
+ 	cpuNum int
+ 
+@@ -327,6 +331,9 @@
+ 	if !b.applyCaps {
+ 		return true // No caps to change but will change UID/GID to `nobody`.
+ 	}
++	if b.selinuxLabel != "" {
++		return true // Switch to the SELinux label after setup.
++	}
+ 	if b.syncUsernsFD >= 0 {
+ 		return true // Rootless mode.
+ 	}
+@@ -425,6 +432,14 @@
+ 	if err != nil {
+ 		util.Fatalf("reading spec: %v", err)
+ 	}
++	// Setup runs in the runtime's SELinux domain; re-execute into the label
++	// assigned to the container once it is done.
++	if label := specutils.SELinuxLabel(spec); label != "" && specutils.SELinuxEnabled() && (b.setUpRoot || b.applyCaps) {
++		if err := sandboxsetup.SetExecLabel(label); err != nil {
++			util.Fatalf("%v", err)
++		}
++		b.selinuxLabel = label
++	}
+ 	timer.Reached("spec read")
+ 
+ 	if specutils.NVProxyEnabled(spec, conf) {
+--- a/runsc/cmd/gofer.go
++++ b/runsc/cmd/gofer.go
+@@ -200,6 +200,22 @@
+ 	}
+ 	lisafsNeeded := lisafsNeededForDirectFSSuppression(spec, mountHints, rootfsHint, g.mountConfs)
+ 
++	// Setup runs in the runtime's SELinux domain; re-execute into the label
++	// assigned to the container once it is done.
++	if label := specutils.SELinuxLabel(spec); g.applyCaps && label != "" && specutils.SELinuxEnabled() {
++		if err := sandboxsetup.SetExecLabel(label); err != nil {
++			util.Fatalf("%v", err)
++		}
++		willReexec = true
++		// The runtime cannot write to the procfs files of a confined process,
++		// so set the gofer's oom_score_adj while it is still unconfined.
++		if spec.Process.OOMScoreAdj != nil {
++			if err := os.WriteFile("/proc/self/oom_score_adj", []byte(fmt.Sprint(*spec.Process.OOMScoreAdj)), 0); err != nil {
++				util.Fatalf("setting oom_score_adj: %v", err)
++			}
++		}
++	}
++
+ 	g.syncFDs.syncChroot()
+ 	g.syncFDs.syncUsernsForRootless(uint32(g.uid), uint32(g.gid))
+ 
+@@ -293,6 +309,12 @@
+ 	if conf.TestOnlyAllowRunAsCurrentUserWithoutChroot {
+ 		procFDPath = "/proc/self/fd"
+ 	}
++	if !conf.TestOnlyAllowRunAsCurrentUserWithoutChroot {
++		// procFDPath was bind-mounted before this process may have re-executed
++		// into another SELinux label, and procfs only relabels its inodes on
++		// lookup. Walk /proc/self/fd so the shared inode matches this process.
++		_, _ = os.Stat("/proc/self/fd")
++	}
+ 	if err := fsgofer.OpenProcSelfFD(procFDPath); err != nil {
+ 		util.Fatalf("failed to open /proc/self/fd: %v", err)
+ 	}
+--- a/runsc/container/container.go
++++ b/runsc/container/container.go
+@@ -1930,6 +1930,11 @@
+ 	if goferPid == 0 || c.Spec.Process.OOMScoreAdj == nil {
+ 		return nil
+ 	}
++	if specutils.SELinuxLabel(c.Spec) != "" && specutils.SELinuxEnabled() {
++		// The gofer set its own oom_score_adj before switching to the
++		// SELinux label.
++		return nil
++	}
+ 	return setOOMScoreAdj(goferPid, *c.Spec.Process.OOMScoreAdj)
+ }
+ 
+@@ -1994,7 +1999,15 @@
+ 	}
+ 
+ 	// Set the lowest of all containers oom_score_adj to the sandbox.
+-	return setOOMScoreAdj(s.Getpid(), lowScore)
++	err = setOOMScoreAdj(s.Getpid(), lowScore)
++	if errors.Is(err, os.ErrPermission) && specutils.SELinuxLabel(spec) != "" && specutils.SELinuxEnabled() {
++		// The host's SELinux policy may not let the runtime write to the
++		// procfs files of a confined sandbox. It keeps the oom_score_adj it
++		// inherited from the shim.
++		log.Warningf("Cannot set oom_score_adj of the SELinux-confined sandbox: %v", err)
++		return nil
++	}
++	return err
+ }
+ 
+ // setOOMScoreAdj sets oom_score_adj to the given value for the given PID.

@@ -1,0 +1,20 @@
+[package]
+name = "gvisor"
+version = "0.1.0"
+edition = "2021"
+publish = false
+build = "../build.rs"
+
+[lib]
+path = "../packages.rs"
+
+[package.metadata.build-package]
+releases-url = "https://github.com/google/gvisor/releases"
+
+# gVisor's `go` branch is the Bazel-free mirror of master, buildable with plain
+# `go build`. This commit is the go-branch merge of release-20260928.0.
+[[package.metadata.build-package.external-files]]
+url = "https://github.com/google/gvisor/archive/30a83191d380204266349f4f58521134f0f73e52/gvisor-30a83191d380204266349f4f58521134f0f73e52.tar.gz"
+sha512 = "7a627884b974e6b2262dcee86e784b13dd3a4cee53cfb16a469337d0e93a35fa9242e28fd0d5592a2e088f70e6247ea06cacc42b0b1ae5d5868b36f18e841fa0"
+bundle-modules = [ "go" ]
+

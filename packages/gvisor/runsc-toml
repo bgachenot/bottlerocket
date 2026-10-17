@@ -1,0 +1,9 @@
+[required-extensions]
+std = { version = "v1" }
++++
+binary_name = "/usr/bin/containerd-runsc"
+
+[runsc_config]
+network = "none"
+platform = "systrap"
+directfs = "false"

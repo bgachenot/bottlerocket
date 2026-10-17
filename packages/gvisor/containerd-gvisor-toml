@@ -1,0 +1,12 @@
+[required-extensions]
+std = { version = "v1" }
++++
+version = 3
+
+# Selected per pod with a RuntimeClass whose handler is "runsc".
+[plugins."io.containerd.cri.v1.runtime".containerd.runtimes.runsc]
+runtime_type = "io.containerd.runsc.v1"
+
+[plugins."io.containerd.cri.v1.runtime".containerd.runtimes.runsc.options]
+TypeUrl = "io.containerd.runsc.v1.options"
+ConfigPath = "/etc/containerd/runsc.toml"
